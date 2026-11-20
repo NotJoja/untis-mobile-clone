@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launch screen for Android < 12 (and the splash-screen plugin): page colour with the logo in the centre.
+     splash_icon exists in a light and a dark variant (drawable-nodpi / drawable-night-nodpi). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splashBg" />
+    <item
+        android:width="288dp"
+        android:height="288dp"
+        android:gravity="center"
+        android:drawable="@drawable/splash_icon" />
+</layer-list>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="splashBg">#121212</color>
+    <color name="windowBg">#000000</color>
+    <bool name="lightBars">false</bool>
+</resources>

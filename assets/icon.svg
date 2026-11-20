@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+  <circle cx="400" cy="400" r="362" fill="#ff5f33"/>
+  <g fill="#fff">
+    <g id="t"><rect x="387" y="78" width="26" height="84" rx="2"/></g>
+    <use href="#t" transform="rotate(22.5 400 400)"/><use href="#t" transform="rotate(45 400 400)"/><use href="#t" transform="rotate(67.5 400 400)"/>
+    <use href="#t" transform="rotate(90 400 400)"/><use href="#t" transform="rotate(112.5 400 400)"/><use href="#t" transform="rotate(135 400 400)"/><use href="#t" transform="rotate(157.5 400 400)"/>
+    <use href="#t" transform="rotate(180 400 400)"/><use href="#t" transform="rotate(202.5 400 400)"/><use href="#t" transform="rotate(225 400 400)"/><use href="#t" transform="rotate(247.5 400 400)"/>
+    <use href="#t" transform="rotate(270 400 400)"/><use href="#t" transform="rotate(292.5 400 400)"/><use href="#t" transform="rotate(315 400 400)"/><use href="#t" transform="rotate(337.5 400 400)"/>
+    <path d="M290 280H352V430A48 48 0 0 0 448 430V280H510V430A110 110 0 0 1 290 430Z"/>
+  </g>
+</svg>

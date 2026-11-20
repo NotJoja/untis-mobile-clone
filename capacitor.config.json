@@ -1,0 +1,21 @@
+{
+  "appId": "com.recode.webuntis",
+  "appName": "WebUntis",
+  "webDir": "public",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "launchFadeOutDuration": 200,
+      "showSpinner": false,
+      "androidScaleType": "FIT_XY",
+      "androidSplashResourceName": "splash"
+    }
+  },
+  "android": {
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "force"
+  }
+}
