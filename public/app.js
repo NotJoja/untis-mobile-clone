@@ -472,7 +472,10 @@ async function ttPageData(start) {
   const mondays = [...new Set(days.map(d => iso(mondayOf(d))))];
   let locked = false;
   const parts = await Promise.all(mondays.map(m => loadWeek(parseISO(m), S.ttRes || OWN).catch(e => { if (e.code === 'LOCKED') { locked = true; return []; } throw e; })));
-  return { days, lessons: parts.flat(), locked };
+  const lessons = parts.flat();
+  // WebUntis returns an empty week (no data at all) for weeks that are not published: the original shows the same lock screen
+  if (!locked && !lessons.length && days.some(d => !T.holi.has(iso(d)))) locked = true;
+  return { days, lessons, locked };
 }
 const ppmY = m => `calc(var(--ppm) * ${m - T.s0}px + ${TT_TOP}px)`;
 const ppmH = min => `calc(var(--ppm) * ${min}px)`;
@@ -497,26 +500,24 @@ function ttGridHtml({ days, lessons, locked }) {
       return;
     }
     const ls = lessons.filter(l => l.date === dIso).sort((a, b) => mins(a.start) - mins(b.start) || mins(b.end) - mins(a.end));
-    // lane assignment for lessons that overlap in time (their widths follow `lw`, default: equal)
-    const lanes = []; let cluster = [], clusterEnd = -1;
-    const flush = () => {
-      const nl = Math.max(1, ...cluster.map(c => c.lane + 1));
-      const w = Array.from({ length: nl }, (_, i) => cluster.find(c => c.lane === i)?.lw || 1 / nl), sum = w.reduce((a, b) => a + b, 0);
-      let x = 0; const left = w.map(v => { const r = x; x += v / sum; return r; });
-      cluster.forEach(c => { c.lf = left[c.lane]; c.wf = w[c.lane] / sum; }); cluster = []; lanes.length = 0;
-    };
+    // simultaneous lessons: the first one is shown, the others collapse into a narrow strip showing how many there are
+    const clusters = [];
     ls.forEach(l => {
-      if (cluster.length && mins(l.start) >= clusterEnd) { flush(); clusterEnd = -1; }
-      let lane = lanes.findIndex(end => end <= mins(l.start)); if (lane < 0) { lane = lanes.length; lanes.push(0); }
-      lanes[lane] = mins(l.end); l.lane = lane; cluster.push(l); clusterEnd = Math.max(clusterEnd, mins(l.end));
+      const c = clusters[clusters.length - 1];
+      if (c && mins(l.start) < c.end) { c.items.push(l); c.end = Math.max(c.end, mins(l.end)); } else clusters.push({ items: [l], end: mins(l.end) });
     });
-    flush();
-    ls.forEach(l => {
-      const x = lessonLines(l), id = `${l.date}|${l.start}|${l.subject}|${l.room}`;
-      T.byId.set(id, l);
-      h += `<div class="les ${l.status} ${lessonIsFuture(l) ? 'future' : ''}" data-id="${esc(id)}" data-date="${l.date}" data-end="${l.end}" style="top:${ppmY(mins(l.start))};height:${ppmH(mins(l.end) - mins(l.start))};left:calc(${(di + l.lf) * 100 / n}% + 1px);width:calc(${l.wf * 100 / n}% - 3px);--bar:${barColor(l)}">
+    const colL = (di + 1) * 100 / n;
+    clusters.forEach(c => {
+      c.items.forEach((l, i) => { l.lane = i; });
+      const l = c.items[0], others = c.items.slice(1), x = lessonLines(l), id = `${l.date}|${l.start}|${l.subject}|${l.room}`;
+      c.items.forEach(o => T.byId.set(`${o.date}|${o.start}|${o.subject}|${o.room}`, o));
+      h += `<div class="les ${l.status} ${lessonIsFuture(l) ? 'future' : ''}" data-id="${esc(id)}" data-date="${l.date}" data-end="${l.end}" style="top:${ppmY(mins(l.start))};height:${ppmH(mins(l.end) - mins(l.start))};left:calc(${di * 100 / n}% + 1px);width:calc(${100 / n}% - ${others.length ? 15.2 : 3}px);--bar:${barColor(l)}">
         <i class="bar"></i><div class="l1">${x.roomHtml}</div><div class="l2">${x.subject}</div>${x.classes ? `<div class="l3">${x.classes}</div>` : ''}
         ${l.status === 'changed' || l.info ? '<i class="info">i</i>' : ''}</div>`;
+      if (others.length) {
+        const t0 = Math.min(...others.map(o => mins(o.start))), t1 = Math.max(...others.map(o => mins(o.end)));
+        h += `<div class="les more" data-id="${esc(id)}" data-date="${l.date}" data-end="${l.end}" style="top:${ppmY(t0)};height:${ppmH(t1 - t0)};left:calc(${colL}% - 12.3px);width:10.3px">${others.length}</div>`;
+      }
     });
     if (dIso === todayIso) h += `<div class="nowseg" data-now style="left:${100 / n * di}%;width:${100 / n}%"></div>`;
   });
@@ -867,13 +868,11 @@ async function viewMessage(id) {
 function viewProfile() {
   const p = S.info.profile;
   const chev = ICON.chevR.replace('<svg', '<svg class="chev"');
-  const row = (icon, label, href) => `<${href ? 'a href="' + href + '"' : 'button'} class="list-row" ${href ? '' : `data-a="${label}"`}><span class="ico">${ICON[icon]}</span><span class="lbl">${label}</span>${chev}</${href ? 'a' : 'button'}>`;
+  const row = (icon, label, href) => `<${href ? 'a href="' + href + '"' + (href.startsWith('http') ? ' target="_blank" rel="noopener"' : '') : 'button'} class="list-row" ${href ? '' : `data-a="${label}"`}><span class="ico">${ICON[icon]}</span><span class="lbl">${label}</span>${chev}</${href ? 'a' : 'button'}>`;
   const root = screenWithTabs('profile', `<div class="scroll"><div class="page-title">${esc(p.name)}</div><div class="cards" style="gap:21px">
     <div class="card"><button class="pcard"><div class="avatar">${esc((p.username || '?')[0])}</div><div class="pn"><b>${esc(p.username)}</b><i>${esc(p.role)}</i></div>${chev}</button></div>
     <div class="card">${row('contact', 'Kontaktdaten', '#/profile/contact')}</div>
-    <div class="card">${row('megaphone', 'Was gibt es Neues')}${row('starBox', 'App bewerten')}${row('info', 'Über', '#/profile/about')}</div>
-    <div class="card"><button class="list-row" data-a="admin"><span class="ico">${ICON.edit}</span><span class="lbl">Admin-Modus</span><span class="sw ${isAdmin() ? 'on' : ''}"></span></button>
-      ${isAdmin() ? `<button class="list-row" data-a="reset"><span class="ico">${ICON.undo}</span><span class="lbl">Änderungen zurücksetzen</span><span class="cnt">${Object.keys(store.get('overrides', {})).length}</span></button>` : ''}</div>
+    <div class="card">${row('megaphone', 'Was gibt es Neues', 'https://help.untis.at/hc/de/articles/360008379600-Untis-Mobile-Android-Release-Notes')}${row('starBox', 'App bewerten', 'https://play.google.com/store/apps/details?id=com.grupet.web.app')}${row('info', 'Über', '#/profile/about')}</div>
     <div class="card">${row('logout', 'Abmelden')}</div></div></div>`);
   const sheet = html => {
     const ov = document.createElement('div'); ov.className = 'overlay dim'; ov.innerHTML = `<div class="sheet"><div class="grab"></div>${html}<button class="cancel">Abbrechen</button></div>`;
@@ -898,8 +897,6 @@ function viewProfile() {
       const ov = sheet(`<div class="grp"><h4>Abmelden?</h4><p>Nach dem Abmelden können Sie sich mit Ihrem Passwort wieder anmelden</p><button class="opt danger" data-a="out">Abmelden</button></div>`);
       ov.querySelector('[data-a=out]').addEventListener('click', signOut);
     }
-    else if (a === 'admin') { store.set('admin', !isAdmin()); viewProfile(); }
-    else if (a === 'reset') { if (confirm('Alle lokalen Stundenplan-Änderungen löschen?')) { store.del('overrides'); S.weekCache = {}; toast('Änderungen zurückgesetzt'); viewProfile(); } }
     else toast('Nicht verfügbar');
   }));
 }
@@ -920,8 +917,12 @@ function viewAbout() {
     <div class="card"><div class="list-row"><span class="lbl" style="margin-left:-6px">Version</span><span style="color:var(--muted);font-size:17px">6.8.1</span></div>
       <div class="list-row"><span class="lbl" style="margin-left:-6px">WebUntis-Version</span><span style="color:var(--muted);font-size:17px">2027.5.1</span></div></div>
     <div class="card"><button class="list-row" id="theme"><span class="lbl" style="margin-left:-6px">Darstellung</span><span style="color:var(--muted);font-size:17px">${{ system: 'System', light: 'Hell', dark: 'Dunkel' }[theme]}</span></button></div>
+    <div class="card"><button class="list-row" data-a="admin"><span class="ico">${ICON.edit}</span><span class="lbl">Admin-Modus</span><span class="sw ${isAdmin() ? 'on' : ''}"></span></button>
+      ${isAdmin() ? `<button class="list-row" data-a="reset"><span class="ico">${ICON.undo}</span><span class="lbl">Änderungen zurücksetzen</span><span class="cnt">${Object.keys(store.get('overrides', {})).length}</span></button>` : ''}</div>
     </div></div>`);
   wireBack(root);
+  root.querySelector('[data-a="admin"]').addEventListener('click', () => { store.set('admin', !isAdmin()); viewAbout(); });
+  root.querySelector('[data-a="reset"]')?.addEventListener('click', () => { if (confirm('Alle lokalen Stundenplan-Änderungen löschen?')) { store.del('overrides'); S.weekCache = {}; toast('Änderungen zurückgesetzt'); viewAbout(); } });
   root.querySelector('#theme').addEventListener('click', () => {
     const next = { system: 'light', light: 'dark', dark: 'system' }[store.get('theme', 'system')];
     store.set('theme', next); applyTheme(); viewAbout();

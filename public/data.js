@@ -32,8 +32,8 @@ window.DEMO = {
     { day: 4, p: 1, n: 1, room: 'C304', subject: 'E11+', bar: '#a5fefe', hue: 185 },
     { day: 4, p: 2, n: 1, room: 'B2 (A313)', subject: 'GEO', bar: '#ffff80', hue: 60, status: 'room', room_changed: true, old_room: 'C304' },
     { day: 4, p: 3, n: 2, room: 'P1 (A511)', subject: 'IMP', bar: '#408080', classes: '11a 11b ...', hue: 180 },
-    { day: 4, p: 5, n: 2, room: 'C206', subject: 'D11+', bar: '#8000ff', hue: 275, lw: 0.8 },
-    { day: 4, p: 5, n: 2, room: 'C304', subject: 'M11+', bar: '#0080ff', hue: 210, lw: 0.2 },
+    { day: 4, p: 5, n: 2, room: 'C206', subject: 'D11+', bar: '#8000ff', hue: 275 },
+    { day: 4, p: 5, n: 2, room: 'C304', subject: 'M11+', bar: '#0080ff', hue: 210 },
   ],
 
   holidays: ['2026-11-23'],
